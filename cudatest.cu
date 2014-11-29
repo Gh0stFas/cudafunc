@@ -145,6 +145,7 @@ int check_stats(double *buf, long nelem, int verbose){
 //}}}
 
 int main(int argc, char **argv){
+  int status=0;
   OPTIONS_T opts;
   int ostat = parse_opts(argc,argv,&opts);
   if(ostat != 0) exit(1);
@@ -169,7 +170,7 @@ int main(int argc, char **argv){
   fill_cbuffer(in2,nelem);
 
   //////////////////////////////////////////////////////////////////////
-  //{{{ complex multiply
+  //{{{ complex conj multiply
   INFO("Running a CUDA enabled complex conj multiply...");
   if(opts.verbose) printf("\n");
   p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,opts.verbose);
@@ -191,6 +192,8 @@ int main(int argc, char **argv){
 
   if(!check_stats(zero_chk,nelem*2,opts.verbose)){
     printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
     //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
   }
   else printf("\033[32mPASSED\033[0m");
@@ -201,7 +204,7 @@ int main(int argc, char **argv){
   //////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////
-  //{{{ complex multiply in-place
+  //{{{ complex conj multiply in-place
   INFO("Running a CUDA enabled complex conj multiply in-place...");
   if(opts.verbose) printf("\n");
   p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,opts.verbose);
@@ -225,7 +228,11 @@ int main(int argc, char **argv){
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
-  if(!check_stats(zero_chk,nelem*2,opts.verbose)) printf("\033[31mFAILED\033[0m");
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
   else printf("\033[32mPASSED\033[0m");
 
   cuda_plan_destroy(p);
@@ -234,7 +241,7 @@ int main(int argc, char **argv){
   //////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////
-  //{{{ complex multiply zero-copy
+  //{{{ complex conj multiply zero-copy
   INFO("Running a CUDA enabled complex conj multiply zero-copy...");
   if(opts.verbose) printf("\n");
   p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,opts.verbose);
@@ -255,7 +262,11 @@ int main(int argc, char **argv){
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
 
-  if(!check_stats(zero_chk,nelem*2,opts.verbose)) printf("\033[31mFAILED\033[0m");
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
   else printf("\033[32mPASSED\033[0m");
 
   cuda_plan_destroy(p);
@@ -264,7 +275,7 @@ int main(int argc, char **argv){
   //////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////
-  //{{{ complex multiply zero-copy in-place
+  //{{{ complex conj multiply zero-copy in-place
   INFO("Running a CUDA enabled complex conj multiply zero-copy in-place...");
   if(opts.verbose) printf("\n");
   p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
@@ -288,7 +299,579 @@ int main(int argc, char **argv){
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
-  if(!check_stats(zero_chk,nelem*2,opts.verbose)) printf("\033[31mFAILED\033[0m");
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex multiply
+  INFO("Running a CUDA enabled complex multiply...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex multiply in-place
+  INFO("Running a CUDA enabled complex multiply in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex multiply zero-copy
+  INFO("Running a CUDA enabled complex multiply zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex multiply zero-copy in-place
+  INFO("Running a CUDA enabled complex multiply zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex divide 
+  INFO("Running a CUDA enabled complex divide...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex divide in-place
+  INFO("Running a CUDA enabled complex divide in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex divide zero-copy
+  INFO("Running a CUDA enabled complex divide zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex divide zero-copy in-place
+  INFO("Running a CUDA enabled complex divide zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex add
+  INFO("Running a CUDA enabled complex add...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex add in-place
+  INFO("Running a CUDA enabled complex add in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex add zero-copy
+  INFO("Running a CUDA enabled complex add zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex add zero-copy in-place
+  INFO("Running a CUDA enabled complex add zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex subtract
+  INFO("Running a CUDA enabled complex subtract...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex subtract in-place
+  INFO("Running a CUDA enabled complex subtract in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex subtract zero-copy
+  INFO("Running a CUDA enabled complex subtract zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ complex subtract zero-copy in-place
+  INFO("Running a CUDA enabled complex subtract zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  cuda_v_cmplx_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float)*2);
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
+  // Run the host equivalent
+  host_v_cmplx_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem*2,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
   else printf("\033[32mPASSED\033[0m");
 
   cuda_plan_destroy(p);
@@ -301,5 +884,5 @@ int main(int argc, char **argv){
   if(in1 != NULL) free(in1);
   if(in2 != NULL) free(in2);
 
-  return 0;
+  return status;
 }

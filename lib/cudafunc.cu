@@ -262,6 +262,39 @@ void cmplx_conj_mult_kernel_host(cuComplex *a, cuComplex *b, cuComplex *c, long 
 void cmplx_conj_mult_kernel_host_ip(cuComplex *a, cuComplex *b, long N){
   for(int i=0;i<N;i++) b[i] = cuCmulf(cuConjf(a[i]),b[i]);
 }
+
+void cmplx_mult_kernel_host(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  for(int i=0;i<N;i++) c[i] = cuCmulf(a[i],b[i]);
+}
+
+void cmplx_mult_kernel_host_ip(cuComplex *a, cuComplex *b, long N){
+  for(int i=0;i<N;i++) b[i] = cuCmulf(a[i],b[i]);
+}
+
+void cmplx_div_kernel_host(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  for(int i=0;i<N;i++) c[i] = cuCdivf(a[i],b[i]);
+}
+
+void cmplx_div_kernel_host_ip(cuComplex *a, cuComplex *b, long N){
+  for(int i=0;i<N;i++) b[i] = cuCdivf(a[i],b[i]);
+}
+
+void cmplx_add_kernel_host(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  for(int i=0;i<N;i++) c[i] = cuCaddf(a[i],b[i]);
+}
+
+void cmplx_add_kernel_host_ip(cuComplex *a, cuComplex *b, long N){
+  for(int i=0;i<N;i++) b[i] = cuCaddf(a[i],b[i]);
+}
+
+void cmplx_sub_kernel_host(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  for(int i=0;i<N;i++) c[i] = cuCsubf(a[i],b[i]);
+}
+
+void cmplx_sub_kernel_host_ip(cuComplex *a, cuComplex *b, long N){
+  for(int i=0;i<N;i++) b[i] = cuCsubf(a[i],b[i]);
+}
+
 //}}}
 
 //{{{ host_v_cmplx_conj_mult 
@@ -293,6 +326,122 @@ int host_v_cmplx_conj_mult(CUDA_PLAN_T *p){
 }
 //}}}
 
+//{{{ host_v_cmplx_mult 
+int host_v_cmplx_mult(CUDA_PLAN_T *p){
+  int status=0;
+
+  if(p != NULL){
+    if(p->inplace){
+      // Run the cudaKernel
+      cmplx_mult_kernel_host_ip((cuComplex *)(p->in1),
+                                     (cuComplex *)(p->in2),
+                                     p->nelem);
+
+    }
+    else{
+      // Run the cudaKernel
+      cmplx_mult_kernel_host((cuComplex *)(p->in1),
+                                  (cuComplex *)(p->in2),
+                                  (cuComplex *)(p->out),
+                                  p->nelem);
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ host_v_cmplx_div
+int host_v_cmplx_div(CUDA_PLAN_T *p){
+  int status=0;
+
+  if(p != NULL){
+    if(p->inplace){
+      // Run the cudaKernel
+      cmplx_div_kernel_host_ip((cuComplex *)(p->in1),
+                                     (cuComplex *)(p->in2),
+                                     p->nelem);
+
+    }
+    else{
+      // Run the cudaKernel
+      cmplx_div_kernel_host((cuComplex *)(p->in1),
+                                  (cuComplex *)(p->in2),
+                                  (cuComplex *)(p->out),
+                                  p->nelem);
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ host_v_cmplx_add
+int host_v_cmplx_add(CUDA_PLAN_T *p){
+  int status=0;
+
+  if(p != NULL){
+    if(p->inplace){
+      // Run the cudaKernel
+      cmplx_add_kernel_host_ip((cuComplex *)(p->in1),
+                                     (cuComplex *)(p->in2),
+                                     p->nelem);
+
+    }
+    else{
+      // Run the cudaKernel
+      cmplx_add_kernel_host((cuComplex *)(p->in1),
+                                  (cuComplex *)(p->in2),
+                                  (cuComplex *)(p->out),
+                                  p->nelem);
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ host_v_cmplx_sub
+int host_v_cmplx_sub(CUDA_PLAN_T *p){
+  int status=0;
+
+  if(p != NULL){
+    if(p->inplace){
+      // Run the cudaKernel
+      cmplx_sub_kernel_host_ip((cuComplex *)(p->in1),
+                                     (cuComplex *)(p->in2),
+                                     p->nelem);
+
+    }
+    else{
+      // Run the cudaKernel
+      cmplx_sub_kernel_host((cuComplex *)(p->in1),
+                                  (cuComplex *)(p->in2),
+                                  (cuComplex *)(p->out),
+                                  p->nelem);
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
 //{{{ CUDA kernels
 __global__ void cmplx_conj_mult_kernel(cuComplex *a, cuComplex *b, cuComplex *c, long N){
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -309,6 +458,71 @@ __global__ void cmplx_conj_mult_kernel_ip(cuComplex *a, cuComplex *b, long N){
     tid += blockDim.x * gridDim.x;
   }
 }
+
+__global__ void cmplx_mult_kernel(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    c[tid] = cuCmulf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_mult_kernel_ip(cuComplex *a, cuComplex *b, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    b[tid] = cuCmulf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_div_kernel(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    c[tid] = cuCdivf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_div_kernel_ip(cuComplex *a, cuComplex *b, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    b[tid] = cuCdivf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_add_kernel(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    c[tid] = cuCaddf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_add_kernel_ip(cuComplex *a, cuComplex *b, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    b[tid] = cuCaddf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_sub_kernel(cuComplex *a, cuComplex *b, cuComplex *c, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    c[tid] = cuCsubf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+__global__ void cmplx_sub_kernel_ip(cuComplex *a, cuComplex *b, long N){
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < N){
+    b[tid] = cuCsubf(a[tid],b[tid]);
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
 //}}}
 
 //{{{ cuda_v_cmplx_conj_mult 
@@ -420,6 +634,586 @@ int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *p){
                                                                          (cuComplex*)(p->out_dev[0]),
                                                                          p->elem_per_chunk);
           cmplx_conj_mult_kernel<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                         (cuComplex*)(p->in2_dev[1]),
+                                                                         (cuComplex*)(p->out_dev[1]),
+                                                                         p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+(i*p->elem_per_chunk*2),
+                                             p->out_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+((i+1)*p->elem_per_chunk*2),
+                                             p->out_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+      }
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[1]));
+
+      // TODO: Create/destroy these streams in the init function
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR(cudaStreamDestroy(stream[i]));
+    }
+    else {
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ cuda_v_cmplx_mult
+int cuda_v_cmplx_mult(CUDA_PLAN_T *p){
+  int status=0;
+  int i;
+
+  if(p != NULL){
+    if(p->use_zero_copy){
+      if(p->inplace){
+        // Run the cudaKernel
+        cmplx_mult_kernel_ip<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                              (cuComplex *)(p->in2_dev[0]),
+                                                              p->nelem);
+
+      }
+      else{
+        // Run the cudaKernel
+        cmplx_mult_kernel<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                           (cuComplex *)(p->in2_dev[0]),
+                                                           (cuComplex *)(p->out_dev[0]),
+                                                           p->nelem);
+      }
+      // NOTE: This is a key piece in using zero-copy memory
+      cudaThreadSynchronize();
+    }
+    else if(p->use_streams){
+      // TODO: Create/destroy these streams in the init function
+      cudaStream_t stream[p->num_streams];
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR_SETUP(cudaStreamCreate(&stream[i]));
+
+      // NOTE: nblocks is not p->nblocks!!!
+      if(p->inplace){
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_mult_kernel_ip<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                            (cuComplex*)(p->in2_dev[0]),
+                                                                            p->elem_per_chunk);
+          cmplx_mult_kernel_ip<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                            (cuComplex*)(p->in2_dev[1]),
+                                                                            p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+(i*p->elem_per_chunk*2),
+                                             p->in2_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->in2_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+
+      }
+      else {
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_mult_kernel<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                         (cuComplex*)(p->in2_dev[0]),
+                                                                         (cuComplex*)(p->out_dev[0]),
+                                                                         p->elem_per_chunk);
+          cmplx_mult_kernel<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                         (cuComplex*)(p->in2_dev[1]),
+                                                                         (cuComplex*)(p->out_dev[1]),
+                                                                         p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+(i*p->elem_per_chunk*2),
+                                             p->out_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+((i+1)*p->elem_per_chunk*2),
+                                             p->out_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+      }
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[1]));
+
+      // TODO: Create/destroy these streams in the init function
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR(cudaStreamDestroy(stream[i]));
+    }
+    else {
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ cuda_v_cmplx_div
+int cuda_v_cmplx_div(CUDA_PLAN_T *p){
+  int status=0;
+  int i;
+
+  if(p != NULL){
+    if(p->use_zero_copy){
+      if(p->inplace){
+        // Run the cudaKernel
+        cmplx_div_kernel_ip<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                              (cuComplex *)(p->in2_dev[0]),
+                                                              p->nelem);
+
+      }
+      else{
+        // Run the cudaKernel
+        cmplx_div_kernel<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                           (cuComplex *)(p->in2_dev[0]),
+                                                           (cuComplex *)(p->out_dev[0]),
+                                                           p->nelem);
+      }
+      // NOTE: This is a key piece in using zero-copy memory
+      cudaThreadSynchronize();
+    }
+    else if(p->use_streams){
+      // TODO: Create/destroy these streams in the init function
+      cudaStream_t stream[p->num_streams];
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR_SETUP(cudaStreamCreate(&stream[i]));
+
+      // NOTE: nblocks is not p->nblocks!!!
+      if(p->inplace){
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_div_kernel_ip<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                            (cuComplex*)(p->in2_dev[0]),
+                                                                            p->elem_per_chunk);
+          cmplx_div_kernel_ip<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                            (cuComplex*)(p->in2_dev[1]),
+                                                                            p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+(i*p->elem_per_chunk*2),
+                                             p->in2_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->in2_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+
+      }
+      else {
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_div_kernel<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                         (cuComplex*)(p->in2_dev[0]),
+                                                                         (cuComplex*)(p->out_dev[0]),
+                                                                         p->elem_per_chunk);
+          cmplx_div_kernel<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                         (cuComplex*)(p->in2_dev[1]),
+                                                                         (cuComplex*)(p->out_dev[1]),
+                                                                         p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+(i*p->elem_per_chunk*2),
+                                             p->out_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+((i+1)*p->elem_per_chunk*2),
+                                             p->out_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+      }
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[1]));
+
+      // TODO: Create/destroy these streams in the init function
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR(cudaStreamDestroy(stream[i]));
+    }
+    else {
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ cuda_v_cmplx_add
+int cuda_v_cmplx_add(CUDA_PLAN_T *p){
+  int status=0;
+  int i;
+
+  if(p != NULL){
+    if(p->use_zero_copy){
+      if(p->inplace){
+        // Run the cudaKernel
+        cmplx_add_kernel_ip<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                              (cuComplex *)(p->in2_dev[0]),
+                                                              p->nelem);
+
+      }
+      else{
+        // Run the cudaKernel
+        cmplx_add_kernel<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                           (cuComplex *)(p->in2_dev[0]),
+                                                           (cuComplex *)(p->out_dev[0]),
+                                                           p->nelem);
+      }
+      // NOTE: This is a key piece in using zero-copy memory
+      cudaThreadSynchronize();
+    }
+    else if(p->use_streams){
+      // TODO: Create/destroy these streams in the init function
+      cudaStream_t stream[p->num_streams];
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR_SETUP(cudaStreamCreate(&stream[i]));
+
+      // NOTE: nblocks is not p->nblocks!!!
+      if(p->inplace){
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_add_kernel_ip<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                            (cuComplex*)(p->in2_dev[0]),
+                                                                            p->elem_per_chunk);
+          cmplx_add_kernel_ip<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                            (cuComplex*)(p->in2_dev[1]),
+                                                                            p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+(i*p->elem_per_chunk*2),
+                                             p->in2_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->in2_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+
+      }
+      else {
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_add_kernel<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                         (cuComplex*)(p->in2_dev[0]),
+                                                                         (cuComplex*)(p->out_dev[0]),
+                                                                         p->elem_per_chunk);
+          cmplx_add_kernel<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                         (cuComplex*)(p->in2_dev[1]),
+                                                                         (cuComplex*)(p->out_dev[1]),
+                                                                         p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+(i*p->elem_per_chunk*2),
+                                             p->out_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->out+((i+1)*p->elem_per_chunk*2),
+                                             p->out_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+      }
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
+      CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[1]));
+
+      // TODO: Create/destroy these streams in the init function
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR(cudaStreamDestroy(stream[i]));
+    }
+    else {
+    }
+  }
+  else {
+    ERROR("Invalid plan.\n");
+    status=1;
+  }
+
+  return status;
+}
+//}}}
+
+//{{{ cuda_v_cmplx_sub
+int cuda_v_cmplx_sub(CUDA_PLAN_T *p){
+  int status=0;
+  int i;
+
+  if(p != NULL){
+    if(p->use_zero_copy){
+      if(p->inplace){
+        // Run the cudaKernel
+        cmplx_sub_kernel_ip<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                              (cuComplex *)(p->in2_dev[0]),
+                                                              p->nelem);
+
+      }
+      else{
+        // Run the cudaKernel
+        cmplx_sub_kernel<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
+                                                           (cuComplex *)(p->in2_dev[0]),
+                                                           (cuComplex *)(p->out_dev[0]),
+                                                           p->nelem);
+      }
+      // NOTE: This is a key piece in using zero-copy memory
+      cudaThreadSynchronize();
+    }
+    else if(p->use_streams){
+      // TODO: Create/destroy these streams in the init function
+      cudaStream_t stream[p->num_streams];
+      for(i=0;i<p->num_streams;i++) CUDA_ERROR_SETUP(cudaStreamCreate(&stream[i]));
+
+      // NOTE: nblocks is not p->nblocks!!!
+      if(p->inplace){
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_sub_kernel_ip<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                            (cuComplex*)(p->in2_dev[0]),
+                                                                            p->elem_per_chunk);
+          cmplx_sub_kernel_ip<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
+                                                                            (cuComplex*)(p->in2_dev[1]),
+                                                                            p->elem_per_chunk);
+
+          // Copy the output buffer to the host
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+(i*p->elem_per_chunk*2),
+                                             p->in2_dev[0],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->in2_dev[1],
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyDeviceToHost,
+                                             stream[1]));
+
+        }
+
+      }
+      else {
+        for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
+          // Copy the host memory to the device
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[0],
+                                             p->in1+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in1_dev[1],
+                                             p->in1+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[0],
+                                             p->in2+(i*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[0]));
+          CUDA_ERROR_RUNTIME(cudaMemcpyAsync(p->in2_dev[1],
+                                             p->in2+((i+1)*p->elem_per_chunk*2),
+                                             p->elem_per_chunk*sizeof(cuComplex),
+                                             cudaMemcpyHostToDevice,
+                                             stream[1]));
+
+          // Run the cudaKernel
+          cmplx_sub_kernel<<<p->nblocks,p->nthreads,0,stream[0]>>>((cuComplex*)(p->in1_dev[0]),
+                                                                         (cuComplex*)(p->in2_dev[0]),
+                                                                         (cuComplex*)(p->out_dev[0]),
+                                                                         p->elem_per_chunk);
+          cmplx_sub_kernel<<<p->nblocks,p->nthreads,0,stream[1]>>>((cuComplex*)(p->in1_dev[1]),
                                                                          (cuComplex*)(p->in2_dev[1]),
                                                                          (cuComplex*)(p->out_dev[1]),
                                                                          p->elem_per_chunk);

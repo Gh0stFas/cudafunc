@@ -109,9 +109,17 @@ void show_plan(CUDA_PLAN_T *);
 
 // CUDA Vector functions
 int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *);
+int cuda_v_cmplx_mult(CUDA_PLAN_T *);
+int cuda_v_cmplx_div(CUDA_PLAN_T *);
+int cuda_v_cmplx_add(CUDA_PLAN_T *);
+int cuda_v_cmplx_sub(CUDA_PLAN_T *);
 
 // HOST Vector functions
 int host_v_cmplx_conj_mult(CUDA_PLAN_T *);
+int host_v_cmplx_mult(CUDA_PLAN_T *);
+int host_v_cmplx_div(CUDA_PLAN_T *);
+int host_v_cmplx_add(CUDA_PLAN_T *);
+int host_v_cmplx_sub(CUDA_PLAN_T *);
 
 inline long minl(long x, long y){
   return(x < y ? x:y);
