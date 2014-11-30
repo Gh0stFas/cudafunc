@@ -169,6 +169,7 @@ int main(int argc, char **argv){
   fill_cbuffer(in1,nelem);
   fill_cbuffer(in2,nelem);
 
+//{{{ complex
   //////////////////////////////////////////////////////////////////////
   //{{{ complex conj multiply
   INFO("Running a CUDA enabled complex conj multiply...");
@@ -878,6 +879,577 @@ int main(int argc, char **argv){
   printf("\n");
   //}}}
   //////////////////////////////////////////////////////////////////////
+//}}}
+
+//{{{ real
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real multiply
+  INFO("Running a CUDA enabled real multiply...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,0,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem*2;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real multiply in-place
+  INFO("Running a CUDA enabled real multiply in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real multiply zero-copy
+  INFO("Running a CUDA enabled real multiply zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real multiply zero-copy in-place
+  INFO("Running a CUDA enabled real multiply zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_mult(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_mult(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real divide 
+  INFO("Running a CUDA enabled real divide...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,0,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real divide in-place
+  INFO("Running a CUDA enabled real divide in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real divide zero-copy
+  INFO("Running a CUDA enabled real divide zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real divide zero-copy in-place
+  INFO("Running a CUDA enabled real divide zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_div(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_div(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real add
+  INFO("Running a CUDA enabled real add...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,0,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real add in-place
+  INFO("Running a CUDA enabled real add in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real add zero-copy
+  INFO("Running a CUDA enabled real add zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real add zero-copy in-place
+  INFO("Running a CUDA enabled real add zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_add(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_add(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real subtract
+  INFO("Running a CUDA enabled real subtract...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,0,opts.verbose);
+  show_plan(p);
+
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)){
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+    //for(long i=0;i<nelem;i++) printf("%d= %.12f\n",i,zero_chk[i]);
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real subtract in-place
+  INFO("Running a CUDA enabled real subtract in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real subtract zero-copy
+  INFO("Running a CUDA enabled real subtract zero-copy...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->out,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////
+  //{{{ real subtract zero-copy in-place
+  INFO("Running a CUDA enabled real subtract zero-copy in-place...");
+  if(opts.verbose) printf("\n");
+  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY|CUDA_INPLACE,opts.verbose);
+  show_plan(p);
+
+  // Fill the buffers
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  cuda_v_real_sub(p);
+
+  // Copy the result
+  memcpy(check_v,p->in2,nelem*sizeof(float));
+
+  // Put the data back in place
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
+  // Run the host equivalent
+  host_v_real_sub(p);
+
+  // Check the result against the CUDA version.
+  for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
+
+  if(!check_stats(zero_chk,nelem,opts.verbose)) {
+    printf("\033[31mFAILED\033[0m");
+    // Return a non-zero status to indicate failure
+    status=1;
+  }
+  else printf("\033[32mPASSED\033[0m");
+
+  cuda_plan_destroy(p);
+  printf("\n");
+  //}}}
+  //////////////////////////////////////////////////////////////////////
+//}}}
 
   if(check_v != NULL) free(check_v);
   if(zero_chk != NULL) free(zero_chk);
