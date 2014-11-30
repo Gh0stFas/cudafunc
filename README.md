@@ -20,14 +20,14 @@ together.
 Pull the latest source from GitHub
 
 ```sh
-git clone git://github.com/Gh0stFas/cudafunc.git
+$ git clone git://github.com/Gh0stFas/cudafunc.git
 ```
 
 The current installation assumes that the CUDA SDK is already installed
 so all you need to do is simply run
 
 ```sh
-make
+$ make
 ```
 
 This will build the library along with a simple test binary which you can
