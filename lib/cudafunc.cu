@@ -81,8 +81,10 @@ void show_plan(CUDA_PLAN_T *p){
     INFO("Zero-copy:\t\t%s\n",(p->use_zero_copy == 1 ? "\033[92mYes\033[0m":"\033[91mNo\033[0m"));
     INFO("In-place:\t\t%s\n",(p->inplace == 1 ? "\033[92mYes\033[0m":"\033[91mNo\033[0m"));
     INFO("Streams Enabled:\t%s\n",(p->use_streams == 1 ? "\033[92mYes\033[0m":"\033[91mNo\033[0m"));
+    INFO("Nstreams:\t\t%d\n",p->num_streams);
     INFO("Nchunks:\t\t%d\n",p->nchunks);
-    INFO("Elem. per chunk:\t%d\n",p->elem_per_chunk);
+    INFO("Elem. per chunk:\t%ld\n",p->elem_per_chunk);
+    INFO("Elem. left-over:\t%d\n",p->elem_leftover);
     INFO("Nthreads:\t\t%d\n",p->nthreads);
     INFO("Nblocks:\t\t%d\n",p->nblocks);
     INFO("*************************************************\n");
@@ -114,6 +116,7 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
     p->nblocks=nblocks;
     p->nthreads=nthreads;
     p->verbose=verbose;
+    p->elem_leftover=0;
 
     // Parse the flags
     p->cmplx=(flags&0x1);
@@ -179,6 +182,7 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
       p->nchunks = p->num_streams;
       // NOTE: This needs to be set for the nthreads and nblocks calculation which follows
       p->elem_per_chunk=nelem/p->nchunks;
+      p->elem_leftover = (int)roundf((((float)nelem/(float)p->nchunks) - (float)p->elem_per_chunk)*(float)p->nchunks);
 
       // TODO: Need to document the subtle differences between using cudaHostAlloc
       // to allocate the host buffers instead of calloc in this case.
@@ -760,6 +764,13 @@ int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i] = cuCmulf(cuConjf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i]),
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
+        }
 
       }
       else {
@@ -809,6 +820,13 @@ int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->out))[p->nchunks*p->elem_per_chunk+i] = cuCmulf(cuConjf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i]),
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -905,6 +923,13 @@ int cuda_v_cmplx_mult(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i] = cuCmulf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
+        }
 
       }
       else {
@@ -954,6 +979,13 @@ int cuda_v_cmplx_mult(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->out))[p->nchunks*p->elem_per_chunk+i] = cuCmulf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1050,6 +1082,13 @@ int cuda_v_cmplx_div(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i] = cuCdivf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
+        }
 
       }
       else {
@@ -1099,6 +1138,13 @@ int cuda_v_cmplx_div(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->out))[p->nchunks*p->elem_per_chunk+i] = cuCdivf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1195,6 +1241,13 @@ int cuda_v_cmplx_add(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i] = cuCaddf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
+        }
 
       }
       else {
@@ -1244,6 +1297,13 @@ int cuda_v_cmplx_add(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->out))[p->nchunks*p->elem_per_chunk+i] = cuCaddf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1340,6 +1400,13 @@ int cuda_v_cmplx_sub(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i] = cuCsubf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
+        }
 
       }
       else {
@@ -1389,6 +1456,13 @@ int cuda_v_cmplx_sub(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            ((cuComplex*)(p->out))[p->nchunks*p->elem_per_chunk+i] = cuCsubf(((cuComplex*)(p->in1))[p->nchunks*p->elem_per_chunk+i],
+                                                                             ((cuComplex*)(p->in2))[p->nchunks*p->elem_per_chunk+i]);
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1477,7 +1551,7 @@ __global__ void real_sub_kernel_ip(float *a, float *b, long N){
 }
 //}}}
 
-//{{{ cuda_v_real_mult
+//{{{ cuda_v_real_mul
 int cuda_v_real_mult(CUDA_PLAN_T *p){
   int status=0;
   int i;
@@ -1543,7 +1617,12 @@ int cuda_v_real_mult(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
-
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->in2[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]*p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
+        }
       }
       else {
         for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
@@ -1592,6 +1671,13 @@ int cuda_v_real_mult(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->out[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]*p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1689,6 +1775,13 @@ int cuda_v_real_div(CUDA_PLAN_T *p){
 
         }
 
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->in2[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]/p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
+        }
+
       }
       else {
         for(i=0;i<p->nchunks && !cuda_runtime_failed;i+=p->num_streams){
@@ -1737,6 +1830,12 @@ int cuda_v_real_div(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->out[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]/p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1833,6 +1932,12 @@ int cuda_v_real_add(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->in2[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]+p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
+        }
 
       }
       else {
@@ -1882,6 +1987,12 @@ int cuda_v_real_add(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->out[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]+p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));
@@ -1978,6 +2089,12 @@ int cuda_v_real_sub(CUDA_PLAN_T *p){
                                              stream[1]));
 
         }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->in2[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]-p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
+        }
 
       }
       else {
@@ -2027,6 +2144,12 @@ int cuda_v_real_sub(CUDA_PLAN_T *p){
                                              cudaMemcpyDeviceToHost,
                                              stream[1]));
 
+        }
+        // Handle leftover
+        if(p->elem_leftover > 0){
+          for(i=0;i<p->elem_leftover;i++){
+            p->out[p->nchunks*p->elem_per_chunk+i] = p->in1[p->nchunks*p->elem_per_chunk+i]-p->in2[p->nchunks*p->elem_per_chunk+i];
+          }
         }
       }
       CUDA_ERROR_RUNTIME(cudaStreamSynchronize(stream[0]));

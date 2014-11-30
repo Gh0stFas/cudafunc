@@ -79,6 +79,7 @@ typedef struct {
   long nelem;          // Number of elements to process with this plan
   int nchunks;         // Number of "chunks" to break the input into
   long elem_per_chunk; // Number of elements to process per "chunk"
+  int elem_leftover;   // Number of elements leftover
   int use_zero_copy;   // Flag whether or not to use zero copy buffers
   int flags;           // A copy of the flags used during initialization
   int cmplx;           // Flag to indicate complex buffers
