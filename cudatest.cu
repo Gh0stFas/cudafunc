@@ -15,6 +15,8 @@
 typedef struct {
   int verbose;
   long nelem;
+  int nblocks;
+  int nthreads;
 } OPTIONS_T;
 
 void print_usage(){
@@ -22,10 +24,14 @@ void print_usage(){
   printf("\n\033[1mDESCRIPTION\033[0m\n");
   printf("\tRuns a series of pass/fail tests on an available GPU.\n");
   printf("\n\033[1mOPTION\033[0m\n");
+  printf("\n\t-b, --blocks=N\n");
+  printf("\t\tNumber of processing blocks.\n");
   printf("\n\t-h, --help\n");
   printf("\t\tWhat you need.\n");
   printf("\n\t-n, --nelem=SIZE\n");
   printf("\t\tNumber of elements to process\n");
+  printf("\n\t-t, --threads=N\n");
+  printf("\t\tNumber of threads per block.\n");
   printf("\n\t-v, --verbose=LEVEL\n");
   printf("\t\tVerbosity level.\n");
   return;
@@ -42,14 +48,18 @@ int parse_opts(int argc, char **argv, OPTIONS_T *op){
       {"verbose", optional_argument, 0,'v'},
       {"nelem", required_argument, 0,'n'},
       {"help", no_argument, 0,'h'},
+      {"threads", required_argument, 0,'t'},
+      {"blocks", required_argument, 0,'b'},
       {0,0,0,0}
   };
 
   // Default values
   op->verbose=0;
   op->nelem=DEFAULT_ELEM;
+  op->nthreads=0;
+  op->nblocks=0;
   int long_index =0;
-  while ((opt = getopt_long(argc, argv,"hv::n:", long_options, &long_index )) != -1) {
+  while ((opt = getopt_long(argc, argv,"hv::n:b:t:", long_options, &long_index )) != -1) {
     if(opt == 'v'){
       op->verbose = 1;
     }
@@ -70,6 +80,41 @@ int parse_opts(int argc, char **argv, OPTIONS_T *op){
         else op->nelem=tc;
       }
     }
+    else if(opt == 't'){
+      char *eptr=NULL;
+      tc = strtol(optarg, &eptr, 10);
+      
+      if(tc == 0 && eptr != NULL){
+        printf("Invalid value '%s' passed to --threads\n",optarg);
+        rtn=-1;
+        break;
+      } else {
+        if(tc <= 0){
+          printf("Invalid number of threads %d given\n",tc);
+          rtn=-1;
+          break;
+        }
+        else op->nthreads=tc;
+      }
+    }
+    else if(opt == 'b'){
+      char *eptr=NULL;
+      tc = strtol(optarg, &eptr, 10);
+      
+      if(tc == 0 && eptr != NULL){
+        printf("Invalid value '%s' passed to --blocks\n",optarg);
+        rtn=-1;
+        break;
+      } else {
+        if(tc <= 0){
+          printf("Invalid number of blocks %d given\n",tc);
+          rtn=-1;
+          break;
+        }
+        else op->nblocks=tc;
+      }
+    }
+
     else if(opt == 'h'){
       print_usage();
       rtn=-1;
@@ -150,6 +195,8 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
                    float *in1,
                    float *in2,
                    long nelem,
+                   int nblocks,
+                   int nthreads,
                    int verbose){
   int status=0;
   double avg_err,max_err,std,var;
@@ -158,7 +205,7 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ streams
   printf("\tStreams...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_COMPLEX,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
@@ -189,7 +236,7 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ streams in-place
   printf("\tStreams in-place...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_INPLACE,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_COMPLEX|CUDA_INPLACE,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
@@ -223,7 +270,7 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ zero-copy
   printf("\tZero-copy...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_COMPLEX|CUDA_ZERO_COPY,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
@@ -254,7 +301,7 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ zero-copy in-place
   printf("\tZero-copy in-place...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_COMPLEX|CUDA_ZERO_COPY|CUDA_INPLACE,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
@@ -298,6 +345,8 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
                   float *in1,
                   float *in2,
                   long nelem,
+                  int nblocks,
+                  int nthreads,
                   int verbose){
   int status=0;
   double avg_err,max_err,std,var;
@@ -306,7 +355,7 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ streams
   printf("\tStreams...");
-  p = cuda_plan_init(nelem,-1,-1,-1,0,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,0,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float));
@@ -337,7 +386,7 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ streams in-place
   printf("\tStreams in-place...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_INPLACE,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_INPLACE,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float));
@@ -371,7 +420,7 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ zero-copy
   printf("\tZero-copy...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_ZERO_COPY,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float));
@@ -402,7 +451,7 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   //{{{ zero-copy in-place
   printf("\tZero-copy in-place...");
-  p = cuda_plan_init(nelem,-1,-1,-1,CUDA_ZERO_COPY|CUDA_INPLACE,verbose);
+  p = cuda_plan_init(nelem,-1,nblocks,nthreads,CUDA_ZERO_COPY|CUDA_INPLACE,verbose);
   show_plan(p);
 
   memcpy(p->in1,in1,nelem*sizeof(float));
@@ -467,34 +516,34 @@ int main(int argc, char **argv){
 //{{{ complex
   //////////////////////////////////////////////////////////////////////
   INFO("Running a CUDA enabled complex conj multiply...\n");
-  status = run_test_cmplx(cuda_v_cmplx_conj_mult,host_v_cmplx_conj_mult,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_cmplx(cuda_v_cmplx_conj_mult,host_v_cmplx_conj_mult,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled complex multiply...\n");
-  status = run_test_cmplx(cuda_v_cmplx_mult,host_v_cmplx_mult,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_cmplx(cuda_v_cmplx_mult,host_v_cmplx_mult,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled complex divide...\n");
-  status = run_test_cmplx(cuda_v_cmplx_div,host_v_cmplx_div,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_cmplx(cuda_v_cmplx_div,host_v_cmplx_div,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled complex add...\n");
-  status = run_test_cmplx(cuda_v_cmplx_add,host_v_cmplx_add,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_cmplx(cuda_v_cmplx_add,host_v_cmplx_add,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled complex subtract...\n");
-  status = run_test_cmplx(cuda_v_cmplx_sub,host_v_cmplx_sub,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_cmplx(cuda_v_cmplx_sub,host_v_cmplx_sub,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
   //////////////////////////////////////////////////////////////////////
 //}}}
 
 //{{{ real
   INFO("Running a CUDA enabled real multiply...\n");
-  status = run_test_real(cuda_v_real_mult,host_v_real_mult,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_real(cuda_v_real_mult,host_v_real_mult,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled real divide...\n");
-  status = run_test_real(cuda_v_real_div,host_v_real_div,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_real(cuda_v_real_div,host_v_real_div,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled real add...\n");
-  status = run_test_real(cuda_v_real_add,host_v_real_add,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_real(cuda_v_real_add,host_v_real_add,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
   INFO("Running a CUDA enabled real subtract...\n");
-  status = run_test_real(cuda_v_real_sub,host_v_real_sub,check_v,zero_chk,in1,in2,nelem,opts.verbose);
+  status = run_test_real(cuda_v_real_sub,host_v_real_sub,check_v,zero_chk,in1,in2,nelem,opts.nblocks,opts.nthreads,opts.verbose);
 
 //}}}
 

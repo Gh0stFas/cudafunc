@@ -184,13 +184,14 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
       p->elem_per_chunk=nelem/p->nchunks;
       p->elem_leftover = (int)roundf((((float)nelem/(float)p->nchunks) - (float)p->elem_per_chunk)*(float)p->nchunks);
 
-      // TODO: Need to document the subtle differences between using cudaHostAlloc
-      // to allocate the host buffers instead of calloc in this case.
+      // NOTE: In order to use streams the memory must be pinned, or page-locked, due to the use
+      // of cudaMemcpyAsync. This is why cudaHostAlloc is used instead of a simple malloc or calloc.
       CUDA_ERROR_SETUP(cudaHostAlloc((void **)&(p->in1),p->nelem*sizeof(float)*nfloats,cudaHostAllocDefault));
       CUDA_ERROR_SETUP(cudaHostAlloc((void **)&(p->in2),p->nelem*sizeof(float)*nfloats,cudaHostAllocDefault));
       if(!p->inplace) CUDA_ERROR_SETUP(cudaHostAlloc((void **)&(p->out),p->nelem*sizeof(float)*nfloats,cudaHostAllocDefault));
 
       for(i=0;i<p->num_streams;i++){
+        // Allocate the memory on the GPU for each stream.
         CUDA_ERROR_SETUP(cudaMalloc((void **) &(p->in1_dev[i]), p->elem_per_chunk*sizeof(float)*nfloats));
         CUDA_ERROR_SETUP(cudaMalloc((void **) &(p->in2_dev[i]), p->elem_per_chunk*sizeof(float)*nfloats));
         if(!p->inplace) CUDA_ERROR_SETUP(cudaMalloc((void **) &(p->out_dev[i]), p->elem_per_chunk*sizeof(float)*nfloats));
@@ -214,15 +215,20 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
       // NOTE: This needs to be set for the nthreads and nblocks calculation which follows
       p->elem_per_chunk=nelem/p->nchunks;
 
+      // Can we even use zero-copy?
       if(p->prop.canMapHostMemory){
+        // NOTE: In order for zero-copy buffers work the memory must be pinned, or page-locked by cudaHostAlloc.
         CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->in1), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
         CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->in2), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
         if(!p->inplace) CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->out), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
 
+        // Get pointers to these buffers which work with a GPU
         CUDA_ERROR_SETUP(cudaHostGetDevicePointer(&(p->in1_dev[0]), p->in1, 0));
         CUDA_ERROR_SETUP(cudaHostGetDevicePointer(&(p->in2_dev[0]), p->in2, 0));
         if(!p->inplace) CUDA_ERROR_SETUP(cudaHostGetDevicePointer(&(p->out_dev[0]), p->out, 0));
       } else {
+        // TODO: In this case we ought to setup a generic method which
+        // will work on any GPU configuration.
         ERROR("Device can not map host memory.\n");
         cuda_setup_failed=1;
       }
