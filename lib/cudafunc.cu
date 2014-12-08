@@ -239,7 +239,19 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
     // NOTE: Here we will always attempt to maximize the number of threads
     // per block.
     if(p->nthreads <= 0) p->nthreads=minl(p->elem_per_chunk,p->prop.maxThreadsPerBlock);
+    else{
+      if(p->nthreads > p->prop.maxThreadsPerBlock){
+        if(p->verbose) WARN("Requested number of threads per block exceeds the maxThreadsPerBlock for this device. Truncating to %d.\n",p->prop.maxThreadsPerBlock);
+        p->nthreads = p->prop.maxThreadsPerBlock;
+      }
+    }
     if(p->nblocks <= 0) p->nblocks = p->elem_per_chunk/p->nthreads;
+    else{
+      if(p->nblocks > CUDA_MAX_BLOCKS){
+        if(p->verbose) WARN("Requested number of blocks exceeds the max for this device. Truncating to %d.\n",CUDA_MAX_BLOCKS);
+        p->nblocks = CUDA_MAX_BLOCKS;
+      }
+    }
 
   }
 
