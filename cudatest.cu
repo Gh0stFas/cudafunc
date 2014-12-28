@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <getopt.h>
 #include <cudafunc.h>
 
@@ -201,6 +202,8 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   int status=0;
   double avg_err,max_err,std,var;
   long max_i;
+  timespec ts,te;
+  double cudaTime,hostTime;
   CUDA_PLAN_T *p=NULL;
 
   //{{{ streams
@@ -211,22 +214,32 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
-  host_func(p);
+  host_func(p); 
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
 
   check_stats(zero_chk,nelem*2,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\t\033[31mFAILED\033[0m\n");
+    printf("\t\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -242,7 +255,12 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float)*2);
@@ -250,17 +268,22 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   // Re-fill in2
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
   check_stats(zero_chk,nelem*2,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\033[31mFAILED\033[0m\n");
+    printf("\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -276,22 +299,32 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
 
   check_stats(zero_chk,nelem*2,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\t\033[31mFAILED\033[0m\n");
+    printf("\t\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -307,7 +340,12 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float)*2);
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float)*2);
@@ -315,17 +353,22 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   // Re-fill in2
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
   check_stats(zero_chk,nelem*2,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\033[31mFAILED\033[0m\n");
+    printf("\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -351,6 +394,8 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   int status=0;
   double avg_err,max_err,std,var;
   long max_i;
+  timespec ts,te;
+  double cudaTime,hostTime;
   CUDA_PLAN_T *p=NULL;
 
   //{{{ streams
@@ -361,22 +406,32 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float));
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
 
   check_stats(zero_chk,nelem,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\t\033[31mFAILED\033[0m\n");
+    printf("\t\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -392,7 +447,12 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float));
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float));
@@ -400,17 +460,22 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   // Re-fill in2
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
   check_stats(zero_chk,nelem,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\033[31mFAILED\033[0m\n");
+    printf("\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -426,22 +491,32 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float));
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
 
   check_stats(zero_chk,nelem,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\t\033[31mFAILED\033[0m\n");
+    printf("\t\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }
@@ -457,7 +532,12 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   memcpy(p->in1,in1,nelem*sizeof(float));
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   cuda_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  cudaTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float));
@@ -465,17 +545,22 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   // Re-fill in2
   memcpy(p->in2,in2,nelem*sizeof(float));
 
+  clock_gettime(CLOCK_MONOTONIC,&ts);
+
   // Run the host equivalent
   host_func(p);
+
+  clock_gettime(CLOCK_MONOTONIC,&te);
+  hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
 
   check_stats(zero_chk,nelem,verbose,&avg_err,&var,&std,&max_err,&max_i);
 
-  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m\n");
+  if(fabs(avg_err) < 1e-7) printf("\t\033[32mPASSED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
   else {
-    printf("\t\033[31mFAILED\033[0m\n");
+    printf("\t\033[31mFAILED\033[0m (cuda= %.12f,host= %.12f)\n",cudaTime,hostTime);
     WARN("Error avg= %.12f, std.= %.12f, var.= %.12f, max= %.12f (%ld)\n",avg_err,std,var,max_err,max_i);
     status=1;
   }

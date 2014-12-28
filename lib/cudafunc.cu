@@ -712,7 +712,18 @@ int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *p){
   int i;
 
   if(p != NULL){
+#ifdef _SHOWTIME
+    cudaEvent_t start,stop;
+    float elapsedTime;
+    CUDA_ERROR_RUNTIME(cudaEventCreate(&start));
+    CUDA_ERROR_RUNTIME(cudaEventCreate(&stop));
+#endif
+
     if(p->use_zero_copy){
+#ifdef _SHOWTIME
+      CUDA_ERROR_RUNTIME(cudaEventRecord(start,0));
+#endif
+
       if(p->inplace){
         // Run the cudaKernel
         cmplx_conj_mult_kernel_ip<<<p->nblocks,p->nthreads>>>((cuComplex *)(p->in1_dev[0]),
@@ -729,6 +740,14 @@ int cuda_v_cmplx_conj_mult(CUDA_PLAN_T *p){
       }
       // NOTE: This is a key piece in using zero-copy memory
       cudaThreadSynchronize();
+
+#ifdef _SHOWTIME
+      CUDA_ERROR_RUNTIME(cudaEventRecord(stop,0));
+      CUDA_ERROR_RUNTIME(cudaEventSynchronize(stop));
+      CUDA_ERROR_RUNTIME(cudaEventElapsedTime(&elapsedTime,start,stop));
+
+      printf("elapsed time: %.12f\n",elapsedTime);
+#endif
     }
     else if(p->use_streams){
       // TODO: Create/destroy these streams in the init function
