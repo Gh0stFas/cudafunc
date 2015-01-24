@@ -9,20 +9,24 @@ LIBFLAGS = ${OPT} -c -I${INC} -D_GNU_SOURCE
 # would have to put the math library in an order dependent manner....bleh
 CFLAGS = ${opt} -lm -L${LIB} -I${INC} -D_GNU_SOURCE
 OBJ = libcudafunc.a
-EXECUTABLE = cudatest
+CUDATEST = cudatest
+CUDAQUERY = cudaquery
 
-all : ${EXECUTABLE}
+all : ${CUDATEST} ${CUDAQUERY}
 
-${EXECUTABLE} : ${OBJ} cudatest.cu ${INC}/cudafunc.h ${LIB}/cudafunc.cu
+${CUDATEST} : ${OBJ} cudatest.cu ${INC}/cudafunc.h ${LIB}/cudafunc.cu
 	${CC} -o cudatest cudatest.cu ${CFLAGS} -lcudafunc
+
+${CUDAQUERY} : ${OBJ} cudatest.cu ${INC}/cudafunc.h ${LIB}/cudafunc.cu
+	${CC} -o cudaquery cudaquery.cu ${CFLAGS} -lcudafunc
 
 libcudafunc.a : ${LIB}/cudafunc.cu ${INC}/cudafunc.h
 	${CC} ${LIBFLAGS} -o ${LIB}/cudafunc.o ${LIB}/cudafunc.cu
 	ar -cvq ${LIB}/libcudafunc.a ${LIB}/cudafunc.o
 	
 clean :
-	/bin/rm -f cudatest ${LIB}/*.a ${LIB}/*/*.o ${BIN}/*
+	/bin/rm -f cudatest cudaquery ${LIB}/*.a ${LIB}/*/*.o ${BIN}/*
 
 install :
 	/bin/mkdir -p ${BIN}
-	/bin/mv cudatest ${BIN}
+	/bin/mv cudatest cudaquery ${BIN}

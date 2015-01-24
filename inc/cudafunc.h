@@ -7,6 +7,7 @@
 #include <cuda_runtime_api.h>
 #include <cuComplex.h>
 
+// cuda_init flags
 #define CUDA_COMPLEX 1
 #define CUDA_INPLACE 2
 #define CUDA_ZERO_COPY 4
@@ -98,6 +99,9 @@ typedef struct {
   float *in1_dev[CUDA_MAX_STREAMS];
   float *in2_dev[CUDA_MAX_STREAMS];
   float *out_dev[CUDA_MAX_STREAMS];
+
+  // Stream pointers
+  cudaStream_t stream[CUDA_MAX_STREAMS];
 } CUDA_PLAN_T;
 //}}}
 
