@@ -222,10 +222,18 @@ CUDA_PLAN_T * cuda_plan_init(long nelem, int dev_num, int nblocks, int nthreads,
 
       // Can we even use zero-copy?
       if(p->prop.canMapHostMemory){
-        // NOTE: In order for zero-copy buffers work the memory must be pinned, or page-locked by cudaHostAlloc.
+        // NOTE: The flag cudaHostAllocMapped tells cudaHostAlloc that we want to use
+        // this host memory for the GPU. The flag cudaHostAllocWriteCombined provides
+        // a performance increase for those buffers which are only intended to be read
+        // from the GPU. There will be a considerable decrease in performance if these
+        // buffers are read by the CPU.
         CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->in1), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
         CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->in2), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
-        if(!p->inplace) CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->out), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
+        // It is more likely the case that the output buffer will be read from the
+        // CPU. In this case we will setup the output buffer without the flag
+        // cudaHostAllocWriteCombined.
+        //if(!p->inplace) CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->out), p->nelem*sizeof(float)*nfloats,cudaHostAllocWriteCombined|cudaHostAllocMapped));
+        if(!p->inplace) CUDA_ERROR_SETUP(cudaHostAlloc((void **) &(p->out), p->nelem*sizeof(float)*nfloats,cudaHostAllocMapped));
 
         // Get pointers to these buffers which work with a GPU
         CUDA_ERROR_SETUP(cudaHostGetDevicePointer(&(p->in1_dev[0]), p->in1, 0));

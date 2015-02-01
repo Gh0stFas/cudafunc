@@ -309,6 +309,20 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float)*2);
 
+  // Due to the way zero-copy memory gets allocated we need to do a little
+  // dance here to make sure that the host version does not attempt to
+  // access the buffers allocate by cuda_plan_init. Otherwise there will
+  // be a severe performance penalty making the host version appear much
+  // slower than it actually is.
+  float *tmpa;
+  float *tmpb;
+  tmpa = p->in1;
+  tmpb = p->in2;
+  p->in1 = (float *)malloc(sizeof(float)*nelem*2);
+  p->in2 = (float *)malloc(sizeof(float)*nelem*2);
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
+  memcpy(p->in2,in2,nelem*sizeof(float)*2);
+
   clock_gettime(CLOCK_MONOTONIC,&ts);
 
   // Run the host equivalent
@@ -316,6 +330,12 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   clock_gettime(CLOCK_MONOTONIC,&te);
   hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
+
+  // Free and re-point the buffers so cuda_plan_destroy can do its job
+  free(p->in1);
+  free(p->in2);
+  p->in1=tmpa;
+  p->in2=tmpb;
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
@@ -350,7 +370,16 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float)*2);
 
-  // Re-fill in2
+  // Due to the way zero-copy memory gets allocated we need to do a little
+  // dance here to make sure that the host version does not attempt to
+  // access the buffers allocate by cuda_plan_init. Otherwise there will
+  // be a severe performance penalty making the host version appear much
+  // slower than it actually is.
+  tmpa = p->in1;
+  tmpb = p->in2;
+  p->in1 = (float *)malloc(sizeof(float)*nelem*2);
+  p->in2 = (float *)malloc(sizeof(float)*nelem*2);
+  memcpy(p->in1,in1,nelem*sizeof(float)*2);
   memcpy(p->in2,in2,nelem*sizeof(float)*2);
 
   clock_gettime(CLOCK_MONOTONIC,&ts);
@@ -360,6 +389,13 @@ int run_test_cmplx(int(*cuda_func)(CUDA_PLAN_T*),
 
   clock_gettime(CLOCK_MONOTONIC,&te);
   hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
+
+  // Free and re-point the buffers so cuda_plan_destroy can do its job
+  memcpy(tmpb,p->in2,nelem*sizeof(float)*2);
+  free(p->in1);
+  free(p->in2);
+  p->in1=tmpa;
+  p->in2=tmpb;
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem*2;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
@@ -501,6 +537,20 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   // Copy the result
   memcpy(check_v,p->out,nelem*sizeof(float));
 
+  // Due to the way zero-copy memory gets allocated we need to do a little
+  // dance here to make sure that the host version does not attempt to
+  // access the buffers allocate by cuda_plan_init. Otherwise there will
+  // be a severe performance penalty making the host version appear much
+  // slower than it actually is.
+  float *tmpa;
+  float *tmpb;
+  tmpa = p->in1;
+  tmpb = p->in2;
+  p->in1 = (float *)malloc(sizeof(float)*nelem);
+  p->in2 = (float *)malloc(sizeof(float)*nelem);
+  memcpy(p->in1,in1,nelem*sizeof(float));
+  memcpy(p->in2,in2,nelem*sizeof(float));
+
   clock_gettime(CLOCK_MONOTONIC,&ts);
 
   // Run the host equivalent
@@ -508,6 +558,12 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   clock_gettime(CLOCK_MONOTONIC,&te);
   hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
+
+  // Free and re-point the buffers so cuda_plan_destroy can do its job
+  free(p->in1);
+  free(p->in2);
+  p->in1=tmpa;
+  p->in2=tmpb;
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->out[i]);
@@ -542,7 +598,16 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
   // Copy the result
   memcpy(check_v,p->in2,nelem*sizeof(float));
 
-  // Re-fill in2
+  // Due to the way zero-copy memory gets allocated we need to do a little
+  // dance here to make sure that the host version does not attempt to
+  // access the buffers allocate by cuda_plan_init. Otherwise there will
+  // be a severe performance penalty making the host version appear much
+  // slower than it actually is.
+  tmpa = p->in1;
+  tmpb = p->in2;
+  p->in1 = (float *)malloc(sizeof(float)*nelem);
+  p->in2 = (float *)malloc(sizeof(float)*nelem);
+  memcpy(p->in1,in1,nelem*sizeof(float));
   memcpy(p->in2,in2,nelem*sizeof(float));
 
   clock_gettime(CLOCK_MONOTONIC,&ts);
@@ -552,6 +617,13 @@ int run_test_real(int(*cuda_func)(CUDA_PLAN_T*),
 
   clock_gettime(CLOCK_MONOTONIC,&te);
   hostTime = (te.tv_sec - ts.tv_sec) + ((te.tv_nsec-ts.tv_nsec)/1e9);
+
+  // Free and re-point the buffers so cuda_plan_destroy can do its job
+  memcpy(tmpb,p->in2,nelem*sizeof(float));
+  free(p->in1);
+  free(p->in2);
+  p->in1=tmpa;
+  p->in2=tmpb;
 
   // Check the result against the CUDA version.
   for(long i=0;i<nelem;i++) zero_chk[i] = (double)(check_v[i] - p->in2[i]);
